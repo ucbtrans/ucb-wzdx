@@ -12,7 +12,7 @@ polyline
 
 ``polyline`` is a Python implementation of Google's `Encoded Polyline Algorithm
 Format <https://developers.google.com/maps/documentation/utilities/polylinealgorithm>`__. It is essentially a port of `Mapbox polyline <https://github.com/mapbox/polyline>`__ with some additional features.
-Source: `https://github.com/frederickjansen/polyline <https://github.com/frederickjansen/polyline>` 
+Source: `https://github.com/frederickjansen/polyline` 
 
 Installation
 ------------
