@@ -13,6 +13,12 @@ import db_routines as dbr
 
 #logging.getLogger().setLevel(logging.DEBUG)
 logging.getLogger().setLevel(logging.INFO)
+ch = logging.StreamHandler()
+formatter = logging.Formatter("%(asctime)s;%(levelname)s;%(message)s", "%Y-%m-%d %H:%M:%S")
+ch.setFormatter(formatter)
+logging.getLogger().addHandler(ch)
+
+
 
 src_url = "https://api.511.org/traffic/wzdx?api_key=789a13cf-d2e0-46db-95f2-54c2611933c1"
 
@@ -62,15 +68,19 @@ def update_wz_info_in_db(mydb, features, re_ids):
     '''
 
     acnt, ucnt = 0, 0
+    total = len(features)
     for f in features:
         if f['id'] in re_ids:
             ucnt += 1
+            dbr.update_road_event(mydb, f, is_new=False)
             re_ids.remove(f['id'])
             logging.debug("{}) {}: Updated.".format(ucnt, f['id']))
+            print("{} / {}: update - {}".format(ucnt+acnt, total, f['properties']['event_status']))
         else:
             acnt += 1
-            dbr.insert_new_road_event(mydb, f)
+            dbr.update_road_event(mydb, f)
             logging.debug("{}) {}: Added.".format(acnt, f['id']))
+            print("{} / {}: add - {}".format(ucnt+acnt, total, f['properties']['event_status']))
 
     logging.info("Updated {} road events and added {} road events.".format(ucnt, acnt))
 
@@ -108,9 +118,19 @@ def mark_road_events_for_deletion(mydb, re_ids):
 def main(argv):
     global src_url
 
-    mydb = dbr.connect()
-    dbr.delete_marked_road_events_older_than(mydb, spec="2 HOUR")
-    re_ids = dbr.select_road_event_ids(mydb, filter={'exclude_deleted': True})
+    try:
+        mydb = dbr.connect()
+    except Exception as e:
+        logging.error("Connection to the database server failed: {}".format(str(e)))
+        return
+    
+    try:
+        dbr.delete_marked_road_events_older_than(mydb, spec="2 HOUR")
+        re_ids = dbr.select_road_event_ids(mydb, filter={'exclude_deleted': True})
+    except Exception as e:
+        logging.error("WZ data request failed: {}".format(str(e)))
+        mydb.close()
+        return
 
     r = get_wz_update(src_url)
     if r == None:
@@ -119,7 +139,13 @@ def main(argv):
     features = r['features']
     feed_info = r['road_event_feed_info']
 
-    re_ids = update_wz_info_in_db(mydb, features, re_ids)
+    try:
+        re_ids = update_wz_info_in_db(mydb, features, re_ids)
+    except Exception as e:
+        logging.error("WZ database update failed: {}".format(str(e)))
+        mydb.close()
+        return
+    
     mark_road_events_for_deletion(mydb, re_ids)
 
     mydb.close()
