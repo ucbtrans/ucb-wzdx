@@ -1,8 +1,5 @@
 flask
 flask-caching
-mysql
-mysql-client
-mysql-connector-python
-pandas
-plotly
+mysqlclient
+mysql-connector-python==8.0.28
 requests

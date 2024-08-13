@@ -490,7 +490,10 @@ def dt_str2sql_comp(dt_str):
 
     :return: SQL-compatible date-time string.
     '''
-    d = datetime.fromisoformat(dt_str[:-1])
-    res = d.strftime('%Y-%m-%d %H:%M:%S')
+    dt = dt_str[:-1]
+    parts = dt.split("T")
+    res = parts[0] + " " + parts[1]
+    #d = datetime.fromisoformat(dt)
+    #res = d.strftime('%Y-%m-%d %H:%M:%S')
 
     return res
