@@ -9,5 +9,5 @@ if [ ! -d "$LOGDIR" ]; then
 fi
 
 source "$SRCDIR"/.venv/bin/activate
-python3 "$SRCDIR"/wzd_collect_sf511.py 2>&1 >"$LOGFILE".log
+python3 "$SRCDIR"/wzd_collect_sf511.py 1>&2 >"$LOGFILE".log
 deactivate
