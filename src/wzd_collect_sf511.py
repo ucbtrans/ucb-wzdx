@@ -3,6 +3,7 @@ Work Zone Data Collector that polls SF 511.org.
 Data stream contains WZDx v4.1.
 """
 
+import sys
 import requests
 import logging
 import re
@@ -13,7 +14,7 @@ import db_routines as dbr
 
 #logging.getLogger().setLevel(logging.DEBUG)
 logging.getLogger().setLevel(logging.INFO)
-ch = logging.StreamHandler()
+ch = logging.StreamHandler(sys.stdout)
 formatter = logging.Formatter("%(asctime)s;%(levelname)s;%(message)s", "%Y-%m-%d %H:%M:%S")
 ch.setFormatter(formatter)
 logging.getLogger().addHandler(ch)
