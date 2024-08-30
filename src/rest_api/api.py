@@ -1,19 +1,16 @@
 """
 RESTful API server for WZ data.
 """
-
+import os
+from dotenv import find_dotenv, load_dotenv
 import json
 import mysql.connector
 from flask import Flask, jsonify, request, g
 from shapely import wkb
 
-# Need to secure this
-SSH_HOST = 'localhost'
-SSH_PORT = 3306
-SSH_USERNAME = 'root'
-SSH_PASSWORD = 'WZDx24'
-SSH_DATABASE = 'wzdb'
 
+dotenv_path = find_dotenv()
+load_dotenv(dotenv_path)
 
 
 app = Flask(__name__)
@@ -24,14 +21,13 @@ def get_db():
    
    :return: DB connector object
    '''
-   
    if 'db' not in g:
       g.db = mysql.connector.connect(
-         host=SSH_HOST, 
-         port=SSH_PORT, 
-         database=SSH_DATABASE, 
-         user=SSH_USERNAME, 
-         password=SSH_PASSWORD
+         host=os.getenv('HOST'), 
+         port=int(os.getenv('PORT')), 
+         database=os.getenv('DATABASE'), 
+         user=os.getenv('USERNAME'), 
+         password=os.getenv('PASSWORD')
       )
    return g.db
 
@@ -104,8 +100,12 @@ def get_wzd_record(id):
       mycursor.execute("SELECT * FROM type_of_work WHERE road_event_feature_id = %s", (id,))
       work_type_data = mycursor.fetchone()
       
-      print(len(event_feature_data))
-      converted_event_feature_data = [event_feature_data[0], wkb.loads(bytes(event_feature_data[1])).wkt]
+      mycursor.execute("SELECT ST_AsWKT(geometry) FROM road_event_feature WHERE id = %s and deleted is null", (id,))
+      geometry_data = mycursor.fetchone()
+      
+      #print(len(event_feature_data))
+      #converted_event_feature_data = [event_feature_data[0], wkb.loads(bytes(event_feature_data[1])).wkt]
+      converted_event_feature_data = [event_feature_data[0], geometry_data[0]]
       
       
       # Put this in another method to format into GeoJSON
