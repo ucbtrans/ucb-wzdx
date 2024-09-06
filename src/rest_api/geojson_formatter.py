@@ -26,5 +26,3 @@ def format_into_geojson(id, core_details):
     }
     
     return formatted_geojson
-
-def 

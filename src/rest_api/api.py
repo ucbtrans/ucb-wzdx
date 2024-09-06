@@ -7,6 +7,7 @@ import json
 import mysql.connector
 from flask import Flask, jsonify, request, g
 from shapely import wkb
+from geojson_formatter import format_into_geojson
 
 
 dotenv_path = find_dotenv()
@@ -109,13 +110,15 @@ def get_wzd_record(id):
       
       
       # Put this in another method to format into GeoJSON
-      data = {
-         'core_details': core_details_data if core_details_data else None,
-         'event_feature': converted_event_feature_data if event_feature_data else None,
-         'work_zone': work_zone_data if work_zone_data else None,
-         'worker_presence': worker_presence_data if worker_presence_data else None,
-         'type_of_work': work_type_data if work_type_data else None
-      }
+      #data = {
+      #   'core_details': core_details_data if core_details_data else None,
+      #   'event_feature': converted_event_feature_data if event_feature_data else None,
+      #   'work_zone': work_zone_data if work_zone_data else None,
+      #   'worker_presence': worker_presence_data if worker_presence_data else None,
+      #   'type_of_work': work_type_data if work_type_data else None
+      #}
+      
+      data = format_into_geojson(id, core_details_data)
       
       return jsonify(data)
    except mysql.connector.Error as err:
