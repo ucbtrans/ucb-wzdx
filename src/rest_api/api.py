@@ -118,7 +118,7 @@ def get_wzd_record(id):
       #   'type_of_work': work_type_data if work_type_data else None
       #}
       
-      data = format_into_geojson(id, core_details_data)
+      data = format_into_geojson(id, core_details_data, geometry_data, work_zone_data)
       
       return jsonify(data)
    except mysql.connector.Error as err:
