@@ -1,3 +1,5 @@
+import re
+
 def format_into_geojson(id, core_details, geometry, work_zone_data):
     
     formatted_geojson = {
@@ -22,8 +24,8 @@ def format_into_geojson(id, core_details, geometry, work_zone_data):
             }
         },
         'geometry': {
-            "type": str(type(geometry)),
-            "coordinates": geometry[0]
+            "type": get_wkt_type(geometry[0]),
+            "coordinates": get_geometry_cord(geometry[0])
         },
         'definitions': {
             'Work Zone Road Event': {
@@ -48,3 +50,20 @@ def format_into_geojson(id, core_details, geometry, work_zone_data):
     }
     
     return formatted_geojson
+
+def get_wkt_type(geometry):
+    wkt_type = geometry.partition("(")[0]
+    return wkt_type
+
+def get_geometry_cord(geometry):
+    idx1 = geometry.index("(")
+    idx2 = geometry.index(")")
+    
+    string_values = geometry[idx1 + 1:idx2]
+    
+    array_values = re.split(r"\s|,", string_values)
+    
+    for idx, value in enumerate(array_values):
+        array_values[idx] = float(value)
+    
+    return array_values
