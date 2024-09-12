@@ -124,7 +124,5 @@ def get_wzd_record(id):
    except mysql.connector.Error as err:
       return jsonify({'error': str(err)}), 500
    
-   
-   
 if __name__ == '__main__':
    app.run(port=8800)

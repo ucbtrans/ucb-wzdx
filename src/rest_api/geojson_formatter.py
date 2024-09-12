@@ -24,8 +24,10 @@ def format_into_geojson(id, core_details, geometry, work_zone_data):
             }
         },
         'geometry': {
-            "type": get_wkt_type(geometry[0]),
-            "coordinates": get_geometry_cord(geometry[0])
+            "properties": {
+                "type": get_wkt_type(geometry[0]),
+                "coordinates": get_geometry_cord(geometry[0])
+            }
         },
         'definitions': {
             'Work Zone Road Event': {
