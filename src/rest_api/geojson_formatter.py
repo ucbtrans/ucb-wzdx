@@ -24,10 +24,8 @@ def format_into_geojson(id, core_details, geometry, work_zone_data):
             }
         },
         'geometry': {
-            "properties": {
-                "type": get_wkt_type(geometry[0]),
-                "coordinates": get_geometry_cord(geometry[0])
-            }
+            "type": get_wkt_type(geometry[0]),
+            "coordinates": get_geometry_cord(geometry[0])
         },
         'definitions': {
             'Work Zone Road Event': {
@@ -55,6 +53,8 @@ def format_into_geojson(id, core_details, geometry, work_zone_data):
 
 def get_wkt_type(geometry):
     wkt_type = geometry.partition("(")[0]
+    if wkt_type == "LINESTRING":
+        return "LineString"
     return wkt_type
 
 def get_geometry_cord(geometry):
@@ -62,10 +62,11 @@ def get_geometry_cord(geometry):
     idx2 = geometry.index(")")
     
     string_values = geometry[idx1 + 1:idx2]
-    
-    array_values = re.split(r"\s|,", string_values)
+    coordinates = []
+    array_values = re.split(r",", string_values)
     
     for idx, value in enumerate(array_values):
-        array_values[idx] = float(value)
+        x, y = value.split()
+        coordinates.append([float(x), float(y)])
     
-    return array_values
+    return coordinates

@@ -8,6 +8,7 @@ import mysql.connector
 from flask import Flask, jsonify, request, g
 from shapely import wkb
 from geojson_formatter import format_into_geojson
+from ./db_routines import update_road_event
 
 
 dotenv_path = find_dotenv()
@@ -123,6 +124,17 @@ def get_wzd_record(id):
       return jsonify(data)
    except mysql.connector.Error as err:
       return jsonify({'error': str(err)}), 500
+
+@app.route('/api/wzd/events/', methods=['POST'])
+def post_wzd_record():
+   json = request.get_json()
    
+   geometry_type = json['properties']['geometry']['properties']['type']
+   geometry_coord = json['properties']['geometry']['properties']['coordinates']
+   
+   print(geometry_type)
+   print(geometry_coord)
+   #update_road_event(g.db, json, is_new = False)
+
 if __name__ == '__main__':
    app.run(port=8800)
