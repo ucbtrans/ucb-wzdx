@@ -11,6 +11,6 @@ if [ $? -eq 0 ]; then
 else
   echo "SSH connection to $HOST is down. Opening SSH tunnel..."
   ssh -L $LOCAL_PORT:localhost:$LOCAL_PORT $HOST
-  expect "password:"
-  send "$PASSWORD\r"
+  #expect "password:"
+  #send "$PASSWORD\r"
 fi

@@ -8,7 +8,7 @@ import mysql.connector
 from flask import Flask, jsonify, request, g
 from shapely import wkb
 from geojson_formatter import format_into_geojson
-from ./db_routines import update_road_event
+from src.tools import db_routines
 
 
 dotenv_path = find_dotenv()
