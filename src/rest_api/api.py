@@ -68,7 +68,9 @@ def get_wzd_ids():
    mycursor.execute("SELECT id FROM road_event_feature")
    records = mycursor.fetchall()
    
-   ids = [r[0] for r in records]
+   ids = {
+      'ids' : [r[0] for r in records]
+   }
    
    return jsonify(ids)
 
