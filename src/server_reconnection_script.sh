@@ -1,5 +1,5 @@
 #!/bin/bash
-source ../../.env
+source ../.env
 
 HOST=$SSH_ADDR
 PASSWORD=$SSH_PASSWORD
