@@ -8,7 +8,7 @@ import requests
 import logging
 import re
 import json
-import rest_api/tools/db_routines as dbr
+import rest_api.tools.db_routines as dbr
 
 
 
