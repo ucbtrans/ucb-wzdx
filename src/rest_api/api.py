@@ -24,13 +24,13 @@ def get_db():
    :return: DB connector object
    '''
    if 'db' not in g:
-      g.db = mysql.connector.connect(
-         host=os.getenv('HOST'), 
-         port=int(os.getenv('PORT')), 
-         database=os.getenv('DATABASE'), 
-         user=os.getenv('USERNAME'), 
-         password=os.getenv('PASSWORD')
-      )
+      #g.db = mysql.connector.connect(
+      #   host=os.getenv('HOST'), 
+      #   port=int(os.getenv('PORT')), 
+      #   database=os.getenv('DATABASE'), 
+      #   user=os.getenv('USERNAME'), 
+      #   password=os.getenv('PASSWORD')
+      #)
       g.db = mysql.connector.connect(
          host="localhost", 
          port=3306, 
