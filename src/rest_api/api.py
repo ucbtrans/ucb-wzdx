@@ -37,6 +37,7 @@ def get_db():
          database="wzdb", 
          user="root", 
          password="WZDx24"
+      )
    return g.db
 
 @app.teardown_appcontext
