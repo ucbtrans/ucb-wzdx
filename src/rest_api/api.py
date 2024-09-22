@@ -31,6 +31,12 @@ def get_db():
          user=os.getenv('USERNAME'), 
          password=os.getenv('PASSWORD')
       )
+      g.db = mysql.connector.connect(
+         host="localhost", 
+         port=3306, 
+         database="wzdb", 
+         user="root", 
+         password="WZDx24"
    return g.db
 
 @app.teardown_appcontext
@@ -139,4 +145,4 @@ def post_wzd_record():
    #update_road_event(g.db, json, is_new = False)
 
 if __name__ == '__main__':
-   app.run(port=8800)
+   app.run(host="128.32.234.154", port=8800)
