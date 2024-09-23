@@ -11,7 +11,7 @@ pio.renderers.default = "chrome"
 #us_cities = pd.read_csv("https://raw.githubusercontent.com/plotly/datasets/master/us-cities-top-1k.csv")
 empty_df = pd.DataFrame(columns=['lat', 'lon'])
 
-json_data = requests.get("http://127.0.0.1:8800/api/wzd/events/id").json()
+json_data = requests.get("http://128.32.234.154:8800/api/wzd/events/id").json()
 
 df = pd.DataFrame(json_data)
 
@@ -47,7 +47,7 @@ app.layout = [
     dcc.Dropdown(df.ids.unique(), 'Canada', id='dropdown-selection'),
     dcc.Graph(id='Work Zone Map', figure=fig, 
               style={'width': '1500px', 'height': '800px'}, 
-              config={'editable': True, 
+              config={'editable': False, 
                       'edits': {
                         'shapePosition': True
                     }   
@@ -62,7 +62,7 @@ app.layout = [
     Input('dropdown-selection', 'value')
 )
 def update_graph(value):
-    geo_json_data = requests.get("http://127.0.0.1:8800/api/wzd/events/" + value).json()
+    geo_json_data = requests.get("http://128.32.234.154:8800/api/wzd/events/" + value).json()
     coords = geo_json_data['geometry']['coordinates']
     
     longs = [coord[0] for coord in coords]

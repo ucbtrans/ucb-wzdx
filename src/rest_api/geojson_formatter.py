@@ -55,7 +55,12 @@ def get_wkt_type(geometry):
     wkt_type = geometry.partition("(")[0]
     if wkt_type == "LINESTRING":
         return "LineString"
-    return wkt_type
+    else if wkt_type == "MULTIPOINT":
+        return "MultiPoint"
+    else if wkt_type == "POINT":
+        return "Point"
+    else if wkt_type == "MULTILINESTRING":
+        return "MultiLineString"
 
 def get_geometry_cord(geometry):
     idx1 = geometry.index("(")
