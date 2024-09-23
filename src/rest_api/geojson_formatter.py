@@ -65,15 +65,43 @@ def get_wkt_type(geometry):
         return "UnknownType"
 
 def get_geometry_cord(geometry):
-    idx1 = geometry.index("(")
-    idx2 = geometry.index(")")
+    idx1 = geometry.find("(")
+    idx2 = geometry.rfind(")")
+    wkt_type = geometry.partition("(")[0]
     
-    string_values = geometry[idx1 + 1:idx2]
+    coord_str = geometry[idx1 + 1:idx2]
+    coord_str = re.sub("[()]", "", coord_str)
     coordinates = []
-    array_values = re.split(r",", string_values)
+    array_values = []
+
+    array_values = re.split(r",", coord_str)
     
     for idx, value in enumerate(array_values):
         x, y = value.split()
         coordinates.append([float(x), float(y)])
     
     return coordinates
+
+
+
+
+
+
+
+
+#==============================================================================
+# Main function - for standalone execution.
+#==============================================================================
+
+def main(argv):
+    geom1 = "LINESTRING(-121.8134839 37.3398993,-121.8150591 37.3393793)"
+    geom2 = "MULTIPOINT((-121.866188 37.353966),(-121.866188 37.353966))"
+
+    coord = get_geometry_cord(geom2)
+
+    print(coord)
+
+
+
+if __name__ == "__main__":
+    main(None)
