@@ -1,0 +1,6 @@
+flask
+flask-caching
+mysql-connector-python
+python-dotenv
+requests
+shapely
