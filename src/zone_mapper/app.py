@@ -17,7 +17,7 @@ df = pd.DataFrame(json_data)
 
 app = Dash()
 
-fig = go.Figure(go.Scattermap(
+fig = go.Figure(go.Scattergeo(
     fill = 'toself',
     lon = [],
     lat = [],
@@ -25,16 +25,23 @@ fig = go.Figure(go.Scattermap(
     mode = 'lines+markers',
     line = dict(width = 10, color = 'red')
     #dragmode = 'select'
-)) 
-fig.update_layout(map = {
+))
+
+#fig = go.Figure(go.Scattergeo(
+#    lat=lats, 
+#    lon=longs,
+#    mode='lines+markers',
+#    marker={'size': 20, 'color': "maroon"}
+#))
+
+fig.update_layout(geo = {
     'style': "open-street-map",
     'center': {'lat': 37.8715, 'lon': -122.2730},
     'zoom': 5},
     showlegend = False)
 
 fig.update_layout(
-    clickmode='event+select',
-    
+    clickmode='event+select'    
 )
 #fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
 #fig.update_layout(center={"lat": 37.8715, "lon": -122.2730})
@@ -70,10 +77,20 @@ def update_graph(value):
     
     fig.update_traces(lat=lats, lon=longs)
     line = dict(width = 3, color = 'blue')
-    fig.update_layout(map = {
-        'center': {'lat': lats[0], 'lon': longs[0]},
-        'zoom': 14})
+    #fig.update_layout(map = {
+    #    'center': {'lat': lats[0], 'lon': longs[0]},
+    #    'zoom': 14})
     #fig.update_layout(dragmode='drawclosedpath')
+    
+
+    fig.update_layout(
+        geo={
+            'center': {'lat': lats[0], 'lon': longs[0]},
+            'zoom': 14,
+            'style': "open-street-map" 
+        },
+        showlegend=False
+    )
     
     #fig.add_trace(go.Scatter(
     #        x=lats,
