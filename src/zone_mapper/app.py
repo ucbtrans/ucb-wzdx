@@ -35,7 +35,6 @@ fig = go.Figure(go.Scattergeo(
 #))
 
 fig.update_layout(geo = {
-    'style': "open-street-map",
     'center': {'lat': 37.8715, 'lon': -122.2730},
     'zoom': 5},
     showlegend = False)

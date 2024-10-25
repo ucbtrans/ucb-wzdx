@@ -1,7 +1,9 @@
 from dash import Dash, html, dcc, callback, Output, Input, ALL, State
 import dash_leaflet as dl
+from ipyleaflet import Map, Marker, Polyline, TileLayer
 import pandas as pd
 import requests
+import json
 
 # Fetch the initial data
 json_data = requests.get("http://128.32.234.154:8800/api/wzd/events/id").json()
@@ -32,7 +34,8 @@ app.layout = html.Div([
         zoom=5,  # Initial zoom
         children=[
             dl.TileLayer(),
-            dl.Polyline(id='current-polyline', positions=[])  # Initialize the polyline
+            dl.Polyline(id='current-polyline', positions=[]),  # Initialize the polyline
+            []
         ]
     ),
     dcc.Store(id='coordinates-store', data={'lat': [], 'lon': []}),
@@ -45,7 +48,8 @@ app.layout = html.Div([
     Output('work-zone-map', 'children'),
     Input('dropdown-selection', 'value'),
     State('work-zone-map', 'children'),
-    State('coordinates-store', 'data')
+    State('coordinates-store', 'data'),
+    prevent_initial_call=True
 )
 def create_markers(value, current_children, stored_data):
     # Remove existing markers and polyline
@@ -95,28 +99,56 @@ def create_markers(value, current_children, stored_data):
     # Return the updated TileLayer, polyline, and markers
     return [dl.TileLayer(), polyline, *markers]
 
+@callback(
+    Output('marker-dragend-store', 'data'),
+    Input({'type': 'marker', 'index': ALL}, 'dragend'),  # Use dragend event
+    State('marker-dragend-store', 'data'),
+    prevent_initial_call=True
+)
+def update_marker_positions(dragend_events, current_data):
+    if current_data is None:
+        current_data = {}  # Initialize if it's the first dragend event
+
+    for i, dragend_event in enumerate(dragend_events):
+        if dragend_event:
+            new_position = dragend_event['lat_lng']  # Get new position from event data
+            current_data[i] = new_position
+
+    return current_data
 
 @callback(Output('coordinates-store', 'data'),
               Input('save-button', 'n_clicks'),
+              Input('work-zone-map', 'children'),
               State('dropdown-selection', 'value'),
-              State('work-zone-map', 'children'),  # Get map children
+              State('work-zone-map', 'children'),  # Get updated positions from the store
               State('coordinates-store', 'data'),
               Input('undo-button', 'n_clicks'),
               allow_duplicate=True)
-def save_marker_positions(n_clicks, current_id, map_children, stored_data, undo_clicks):
+def save_marker_positions(n_clicks, markers, current_id, map_children, stored_data, undo_clicks):
     if n_clicks is None:
         return dash.no_update
 
     if undo_clicks is not None:
         return {}
-    # Extract marker positions from map_children
-    positions = map_children[1]['props']['positions']
-    #print(positions)
+
+    positions = extract_marker_positions(json.dumps(markers[2:]))
+
     lats = [position[0] for position in positions]
     lons = [position[1] for position in positions]
-    #print(lats, lons)
+    print(lats, lons)
+    
     # Store the marker positions with the current ID
     return {**stored_data, current_id: {'lat': lats, 'lon': lons}}
+
+def extract_marker_positions(json_data):
+  data = json.loads(json_data)
+  positions = []
+  for item in data:
+    if item['type'] == 'Marker':
+      positions.append(tuple(item['props']['position']))
+  return positions
+
+
 
 @callback(Output('coordinates-display', 'children'),
           Input('save-button', 'n_clicks'),
