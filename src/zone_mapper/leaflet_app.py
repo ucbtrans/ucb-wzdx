@@ -1,6 +1,6 @@
-from dash import Dash, html, dcc, callback, Output, Input, ALL, State
+from dash import Dash, html, dcc, callback, Output, Input, ALL, State, dash
 import dash_leaflet as dl
-from ipyleaflet import Map, Marker, Polyline, TileLayer
+from ipyleaflet import Map, Marker, Polyline, TileLayer, Polygon
 import pandas as pd
 import requests
 import json
@@ -14,9 +14,10 @@ app = Dash(__name__)
 app.layout = html.Div([
     html.Div(
         [
-            html.H1(children='Zone Mapping App', style={'textAlign': 'center'}),
+            html.H1(children='Zone Mapping App', style={'text-align': 'center'}),
             html.Div(
                 [
+                    html.Button("Toggle Map", id="toggle-map-style", style={'margin-right': '5px', 'padding': '10px 15px'}),
                     html.Button("Save", id="save-button", style={'margin-right': '5px', 'padding': '10px 15px'}),
                     html.Button("Publish", id="publish-button", style={'margin-right': '5px', 'padding': '10px 15px'}),
                     html.Button("Undo", id="undo-button", style={'padding': '10px 15px'})
@@ -27,16 +28,34 @@ app.layout = html.Div([
         style={'display': 'flex', 'justify-content': 'space-between', "overflow-y": "scroll"}
     ),
     dcc.Dropdown(df.ids.unique(), 'Canada', id='dropdown-selection'),
-    dl.Map(
-        id="work-zone-map",
-        style={'width': '1500px', 'height': '800px'},
-        center=[37.8715, -122.2730],  # Initial center
-        zoom=5,  # Initial zoom
-        children=[
-            dl.TileLayer(),
-            dl.Polyline(id='current-polyline', positions=[]),  # Initialize the polyline
-            []
-        ]
+        html.Div(  # Wrap the map and JSON display in a div
+        [
+            dl.Map(
+                id="work-zone-map",
+                style={'width': '1500px', 'height': '800px', 'display': 'inline-block'},  # Adjust width and add display property
+                center=[37.8715, -122.2730],  # Initial center
+                zoom=5,  # Initial zoom
+                children=[
+                    dl.TileLayer(id='tile-layer', className = 'osm'),
+                    dl.Polygon(id='current-polygon', positions=[]),  # Initialize the polyline
+                    []
+                ]
+            ),
+            html.Div([
+                html.H2("GeoJSON Data", style={'text-align': 'center'}),
+                html.Div(id='json-output', style={'display': 'inline-block', 'width': '700px', 'vertical-align': 'top', 
+                        'padding': '10px'}),  # Add JSON output div
+            ],
+            style={
+                    'display': 'inline-block', 
+                    'width': '700px', 
+                    'vertical-align': 'top',
+                    'border': '1px solid gray'
+                }
+            )
+
+        ],
+        style={'display': 'flex'}  # Use flexbox for layout
     ),
     dcc.Store(id='coordinates-store', data={'lat': [], 'lon': []}),
     dcc.Store(id='marker-dragend-store'),
@@ -46,20 +65,26 @@ app.layout = html.Div([
 # Callback to create markers and reset polyline when a record is selected
 @callback(
     Output('work-zone-map', 'children'),
+    Output('work-zone-map', 'center'),
+    Output('work-zone-map', 'zoom'),
+    Output('json-output', 'children'),
     Input('dropdown-selection', 'value'),
     State('work-zone-map', 'children'),
     State('coordinates-store', 'data'),
     prevent_initial_call=True
 )
 def create_markers(value, current_children, stored_data):
+    # Fetch new data based on the selected dropdown value
+    geo_json_data = requests.get(f"http://128.32.234.154:8800/api/wzd/events/{value}").json()
+    
+    
     # Remove existing markers and polyline
     current_children = [
         child for child in current_children
-        if not isinstance(child, (dl.Marker, dl.Polyline))
+        if not isinstance(child, (dl.Marker, dl.Polygon))
     ]
-    #print(value)
+
     if value in stored_data:
-        #print(1)
         # Use stored data to create markers
         lats = stored_data[value]['lat']
         lons = stored_data[value]['lon']
@@ -70,15 +95,11 @@ def create_markers(value, current_children, stored_data):
                       id={'type': 'marker', 'index': i})
             for i, (lat, lon) in enumerate(zip(lats, lons))
         ]
-        polyline = dl.Polyline(id='current-polyline',
-                               positions=list(zip(lats, lons)))
+
 
     else:
-        # Fetch new data based on the selected dropdown value
-        geo_json_data = requests.get(
-            f"http://128.32.234.154:8800/api/wzd/events/{value}").json()
         coords = geo_json_data['geometry']['coordinates']
-        longs = [coord[0] for coord in coords]
+        lons = [coord[0] for coord in coords]
         lats = [coord[1] for coord in coords]
 
         # Remove existing markers and polyline, but keep the TileLayer
@@ -90,14 +111,17 @@ def create_markers(value, current_children, stored_data):
                     interactive=True,
                     draggable=True,
                     id={'type': 'marker', 'index': i})
-            for i, (lat, lon) in enumerate(zip(lats, longs))
+            for i, (lat, lon) in enumerate(zip(lats, lons))
         ]
 
-        # Create the polyline connecting the markers
-        polyline = dl.Polyline(id='current-polyline', positions=list(zip(lats, longs)))
+    # Create the polyline connecting the markers
+    polygon = dl.Polygon(id='current-polygon', positions=list(zip(lats, lons)))
+    
+    new_center = [lats[0], lons[0]]
+    new_zoom = 18
 
     # Return the updated TileLayer, polyline, and markers
-    return [dl.TileLayer(), polyline, *markers]
+    return [dl.TileLayer(), polygon, *markers], new_center, new_zoom, html.Pre(json.dumps(geo_json_data, indent=2))
 
 @callback(
     Output('marker-dragend-store', 'data'),
@@ -116,20 +140,23 @@ def update_marker_positions(dragend_events, current_data):
 
     return current_data
 
-@callback(Output('coordinates-store', 'data'),
-              Input('save-button', 'n_clicks'),
-              Input('work-zone-map', 'children'),
-              State('dropdown-selection', 'value'),
-              State('work-zone-map', 'children'),  # Get updated positions from the store
-              State('coordinates-store', 'data'),
-              Input('undo-button', 'n_clicks'),
-              allow_duplicate=True)
-def save_marker_positions(n_clicks, markers, current_id, map_children, stored_data, undo_clicks):
-    if n_clicks is None:
-        return dash.no_update
 
+@callback(Output('coordinates-store', 'data'),
+          Output('save-button', 'n_clicks'),
+          Output('undo-button', 'n_clicks'),
+          Output('current-polygon', 'positions'),
+          Input('save-button', 'n_clicks'),
+          Input('work-zone-map', 'children'),
+          State('dropdown-selection', 'value'),
+          State('coordinates-store', 'data'),
+          Input('undo-button', 'n_clicks'),
+          allow_duplicate=True)
+def save_marker_positions(n_clicks, markers, current_id, stored_data, undo_clicks):    
     if undo_clicks is not None:
-        return {}
+        return {'lat': None, 'lon': None}, None, None, dash.no_update
+    
+    if n_clicks is None:
+        return dash.no_update, None, None, dash.no_update
 
     positions = extract_marker_positions(json.dumps(markers[2:]))
 
@@ -137,8 +164,11 @@ def save_marker_positions(n_clicks, markers, current_id, map_children, stored_da
     lons = [position[1] for position in positions]
     print(lats, lons)
     
+    polygon_positions = [[lats[i], lons[i]] for i in range(len(lats))]
+
+    
     # Store the marker positions with the current ID
-    return {**stored_data, current_id: {'lat': lats, 'lon': lons}}
+    return {**stored_data, current_id: {'lat': lats, 'lon': lons}}, None, None, polygon_positions
 
 def extract_marker_positions(json_data):
   data = json.loads(json_data)
@@ -154,7 +184,6 @@ def extract_marker_positions(json_data):
           Input('save-button', 'n_clicks'),
           Input('coordinates-store', 'data'))
 def display_coordinates(n_clicks, stored_data):
-    print(3)
     if not stored_data:
         return "No coordinates"
 
@@ -172,6 +201,30 @@ def display_coordinates(n_clicks, stored_data):
         ]))
 
     return output
+
+@app.callback(
+    Output("tile-layer", "className"),
+    Output("tile-layer", "url"),
+    Input("toggle-map-style", "n_clicks"),
+    State("tile-layer", "className")
+)
+def toggle_map_style(n_clicks, current_state):
+    if n_clicks is None:
+        return 'osm', None
+
+    if current_state == 'osm':
+        return 'satellite', "http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+    else:
+        return 'osm', None
+    
+#
+#@app.callback(
+#    Output(""),
+#    Input("work-zone-map", "clickData")
+#)
+#def add_delete_markers(clickData):
+#    latlong = clickData.latlong
+    
 
 if __name__ == '__main__':
     app.run_server(debug=True)
