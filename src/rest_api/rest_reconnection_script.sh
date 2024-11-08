@@ -3,7 +3,7 @@
 export SRCDIR="/Users/ashwinbardhwaj/Documents/PATH/Work Zone Project/ucb-wzdx"
 export RESTAPI="$SRCDIR"/api.py
 
-export PORTSTR=`netstat -nlp |grep "128.32.234.154:8800"`
+export PORTSTR=`netstat -nlp |grep "128.32.234.154:8900"`
 
 if [ -z "$PORTSTR" ]; then
 	cd $SRCDIR
