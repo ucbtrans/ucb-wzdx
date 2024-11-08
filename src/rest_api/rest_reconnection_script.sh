@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export SRCDIR="/Users/ashwinbardhwaj/Documents/PATH/Work Zone Project/ucb-wzdx"
+export SRCDIR="/home/alexk/ucb-wzdx/src/rest_api"
 export RESTAPI="$SRCDIR"/api.py
 
 export PORTSTR=`netstat -nlp |grep "128.32.234.154:8900"`
