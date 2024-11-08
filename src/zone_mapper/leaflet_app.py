@@ -1,4 +1,4 @@
-from dash import Dash, html, dcc, callback, Output, Input, ALL, State, dash
+from dash import Dash, html, dcc, callback, Output, Input, ALL, State, dash, ctx
 import dash_leaflet as dl
 from ipyleaflet import Map, Marker, Polyline, TileLayer, Polygon
 import pandas as pd
@@ -6,7 +6,8 @@ import requests
 import json
 
 # Fetch the initial data
-json_data = requests.get("http://128.32.234.154:8800/api/wzd/events/id").json()
+#json_data = requests.get("http://128.32.234.154:8800/api/wzd/events/id").json()
+json_data = requests.get("http://127.0.0.1:8800/api/wzd/events/id").json()
 df = pd.DataFrame(json_data)
 
 app = Dash(__name__)
@@ -17,6 +18,7 @@ app.layout = html.Div([
             html.H1(children='Zone Mapping App', style={'text-align': 'center'}),
             html.Div(
                 [
+                    html.Button("Add Marker", id="add-marker-button", n_clicks = 0, style={'margin-right': '5px', 'padding': '10px 15px', 'background-color': 'white'}),
                     html.Button("Toggle Map", id="toggle-map-style", style={'margin-right': '5px', 'padding': '10px 15px'}),
                     html.Button("Save", id="save-button", style={'margin-right': '5px', 'padding': '10px 15px'}),
                     html.Button("Publish", id="publish-button", style={'margin-right': '5px', 'padding': '10px 15px'}),
@@ -38,7 +40,7 @@ app.layout = html.Div([
                 children=[
                     dl.TileLayer(id='tile-layer', className = 'osm'),
                     dl.Polygon(id='current-polygon', positions=[]),  # Initialize the polyline
-                    []
+                    dl.LayerGroup(id='marker-group')
                 ]
             ),
             html.Div([
@@ -75,8 +77,8 @@ app.layout = html.Div([
 )
 def create_markers(value, current_children, stored_data):
     # Fetch new data based on the selected dropdown value
-    geo_json_data = requests.get(f"http://128.32.234.154:8800/api/wzd/events/{value}").json()
-    
+    #geo_json_data = requests.get(f"http://128.32.234.154:8800/api/wzd/events/{value}").json()
+    geo_json_data = requests.get(f"http://127.0.0.1:8800/api/wzd/events/{value}").json()
     
     # Remove existing markers and polyline
     current_children = [
@@ -96,7 +98,6 @@ def create_markers(value, current_children, stored_data):
             for i, (lat, lon) in enumerate(zip(lats, lons))
         ]
 
-
     else:
         coords = geo_json_data['geometry']['coordinates']
         lons = [coord[0] for coord in coords]
@@ -113,6 +114,9 @@ def create_markers(value, current_children, stored_data):
                     id={'type': 'marker', 'index': i})
             for i, (lat, lon) in enumerate(zip(lats, lons))
         ]
+        
+    # Create the layer group of all polygons
+    lg = dl.LayerGroup(id='marker-group', children= markers)
 
     # Create the polyline connecting the markers
     polygon = dl.Polygon(id='current-polygon', positions=list(zip(lats, lons)))
@@ -121,7 +125,7 @@ def create_markers(value, current_children, stored_data):
     new_zoom = 18
 
     # Return the updated TileLayer, polyline, and markers
-    return [dl.TileLayer(), polygon, *markers], new_center, new_zoom, html.Pre(json.dumps(geo_json_data, indent=2))
+    return [dl.TileLayer(), polygon, lg], new_center, new_zoom, html.Pre(json.dumps(geo_json_data, indent=2))
 
 @callback(
     Output('marker-dragend-store', 'data'),
@@ -146,7 +150,7 @@ def update_marker_positions(dragend_events, current_data):
           Output('undo-button', 'n_clicks'),
           Output('current-polygon', 'positions'),
           Input('save-button', 'n_clicks'),
-          Input('work-zone-map', 'children'),
+          Input('marker-group', 'children'),
           State('dropdown-selection', 'value'),
           State('coordinates-store', 'data'),
           Input('undo-button', 'n_clicks'),
@@ -158,7 +162,7 @@ def save_marker_positions(n_clicks, markers, current_id, stored_data, undo_click
     if n_clicks is None:
         return dash.no_update, None, None, dash.no_update
 
-    positions = extract_marker_positions(json.dumps(markers[2:]))
+    positions = extract_marker_positions(markers)
 
     lats = [position[0] for position in positions]
     lons = [position[1] for position in positions]
@@ -170,14 +174,11 @@ def save_marker_positions(n_clicks, markers, current_id, stored_data, undo_click
     # Store the marker positions with the current ID
     return {**stored_data, current_id: {'lat': lats, 'lon': lons}}, None, None, polygon_positions
 
-def extract_marker_positions(json_data):
-  data = json.loads(json_data)
+def extract_marker_positions(markers):
   positions = []
-  for item in data:
-    if item['type'] == 'Marker':
-      positions.append(tuple(item['props']['position']))
+  for item in markers:
+    positions.append(item['props']['position'])
   return positions
-
 
 
 @callback(Output('coordinates-display', 'children'),
@@ -217,13 +218,26 @@ def toggle_map_style(n_clicks, current_state):
     else:
         return 'osm', None
     
-#
-#@app.callback(
-#    Output(""),
-#    Input("work-zone-map", "clickData")
-#)
-#def add_delete_markers(clickData):
-#    latlong = clickData.latlong
+
+@app.callback(
+    Output("marker-group", 'children'),
+    Output("add-marker-button", "style"),
+    Input("work-zone-map", "click_lat_lng"),
+    Input("add-marker-button", 'n_clicks'),
+    State("marker-group", 'children')
+)
+def add_delete_markers(clickData, n_clicks, children):
+    triggered_id = ctx.triggered_id
+    
+    if triggered_id == "add-marker-button":
+        clickData = None
+    
+    if (n_clicks % 2 == 1) & (clickData != None):
+        new_marker = dl.Marker(position=clickData, interactive=True, draggable=True)
+        children.append(new_marker)
+        
+    button_style = {'background-color': 'red'} if n_clicks % 2 == 1 else {'background-color': 'white'} 
+    return children, button_style
     
 
 if __name__ == '__main__':

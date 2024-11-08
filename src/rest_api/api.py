@@ -145,5 +145,8 @@ def post_wzd_record():
    print(geometry_coord)
    update_road_event(g.db, json, is_new = False)
 
+#if __name__ == '__main__':
+#   app.run(host="128.32.234.154", port=8800)
+
 if __name__ == '__main__':
-   app.run(host="128.32.234.154", port=8800)
+   app.run(port=8800)
