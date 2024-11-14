@@ -168,11 +168,11 @@ def save_marker_positions(n_clicks, markers, current_id, stored_data, undo_click
     lats = [position[0] for position in positions]
     lons = [position[1] for position in positions]
     #print(lats, lons)
-    polygon = osm_mapper.create_shapely_polygon(positions)
-    print(1)
-    graph = osm_mapper.retrieve_street_graph(positions, polygon)
-    print(2)
-    street_list = osm_mapper.get_street_list_in_bbox(graph)
+    #polygon = osm_mapper.create_shapely_polygon(positions)
+    #print(1)
+    #graph = osm_mapper.retrieve_street_graph(positions, polygon)
+    #print(2)
+    #street_list = osm_mapper.get_street_list_in_bbox(graph)
     
     print("Street List", street_list)
     
