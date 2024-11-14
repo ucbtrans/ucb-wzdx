@@ -6,8 +6,8 @@ import requests
 import json
 
 # Fetch the initial data
-#json_data = requests.get("http://128.32.234.154:8800/api/wzd/events/id").json()
-json_data = requests.get("http://127.0.0.1:8800/api/wzd/events/id").json()
+json_data = requests.get("http://128.32.234.154:8900/api/wzd/events/id").json()
+#json_data = requests.get("http://127.0.0.1:8900/api/wzd/events/id").json()
 df = pd.DataFrame(json_data)
 
 app = Dash(__name__)
@@ -77,8 +77,8 @@ app.layout = html.Div([
 )
 def create_markers(value, current_children, stored_data):
     # Fetch new data based on the selected dropdown value
-    #geo_json_data = requests.get(f"http://128.32.234.154:8800/api/wzd/events/{value}").json()
-    geo_json_data = requests.get(f"http://127.0.0.1:8800/api/wzd/events/{value}").json()
+    geo_json_data = requests.get(f"http://128.32.234.154:8900/api/wzd/events/{value}").json()
+    #geo_json_data = requests.get(f"http://127.0.0.1:8900/api/wzd/events/{value}").json()
     
     # Remove existing markers and polyline
     current_children = [
