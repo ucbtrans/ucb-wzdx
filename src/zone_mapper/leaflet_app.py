@@ -4,6 +4,7 @@ from ipyleaflet import Map, Marker, Polyline, TileLayer, Polygon
 import pandas as pd
 import requests
 import json
+import osm_mapper
 
 # Fetch the initial data
 json_data = requests.get("http://128.32.234.154:8900/api/wzd/events/id").json()
@@ -163,10 +164,17 @@ def save_marker_positions(n_clicks, markers, current_id, stored_data, undo_click
         return dash.no_update, None, None, dash.no_update
 
     positions = extract_marker_positions(markers)
-
+    print("Positions", positions)
     lats = [position[0] for position in positions]
     lons = [position[1] for position in positions]
-    print(lats, lons)
+    #print(lats, lons)
+    polygon = osm_mapper.create_shapely_polygon(positions)
+    print(1)
+    graph = osm_mapper.retrieve_street_graph(positions, polygon)
+    print(2)
+    street_list = osm_mapper.get_street_list_in_bbox(graph)
+    
+    print("Street List", street_list)
     
     polygon_positions = [[lats[i], lons[i]] for i in range(len(lats))]
 
