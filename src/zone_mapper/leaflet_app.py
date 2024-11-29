@@ -8,7 +8,6 @@ import osm_mapper
 
 # Fetch the initial data
 json_data = requests.get("http://128.32.234.154:8900/api/wzd/events/id").json()
-#json_data = requests.get("http://127.0.0.1:8900/api/wzd/events/id").json()
 df = pd.DataFrame(json_data)
 
 app = Dash(__name__)
@@ -16,10 +15,10 @@ app = Dash(__name__)
 app.layout = html.Div([
     html.Div(
         [
-            html.H1(children='Zone Mapping App', style={'text-align': 'center'}),
+            html.H1(children='Zone Mapping App', style={'text-align': 'center', 'width': '100%'}),
             html.Div(
                 [
-                    html.Button("Add Marker", id="add-marker-button", n_clicks = 0, style={'margin-right': '5px', 'padding': '10px 15px', 'background-color': 'white'}),
+                    html.Button("Add Marker", id="add-marker-button", n_clicks = 0, style={'margin-right': '5px', 'padding': '10px 15px'}),
                     html.Button("Toggle Map", id="toggle-map-style", style={'margin-right': '5px', 'padding': '10px 15px'}),
                     html.Button("Save", id="save-button", style={'margin-right': '5px', 'padding': '10px 15px'}),
                     html.Button("Publish", id="publish-button", style={'margin-right': '5px', 'padding': '10px 15px'}),
@@ -77,9 +76,12 @@ app.layout = html.Div([
     prevent_initial_call=True
 )
 def create_markers(value, current_children, stored_data):
+    
     # Fetch new data based on the selected dropdown value
-    geo_json_data = requests.get(f"http://128.32.234.154:8900/api/wzd/events/{value}").json()
-    #geo_json_data = requests.get(f"http://127.0.0.1:8900/api/wzd/events/{value}").json()
+    try:
+        geo_json_data = requests.get(f"http://128.32.234.154:8900/api/wzd/events/{value}").json()
+    except Exception:
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
     
     # Remove existing markers and polyline
     current_children = [
@@ -126,7 +128,7 @@ def create_markers(value, current_children, stored_data):
     new_zoom = 18
 
     # Return the updated TileLayer, polyline, and markers
-    return [dl.TileLayer(), polygon, lg], new_center, new_zoom, html.Pre(json.dumps(geo_json_data, indent=2))
+    return [dl.TileLayer(maxZoom=20), polygon, lg], new_center, new_zoom, html.Pre(json.dumps(geo_json_data, indent=2))
 
 @callback(
     Output('marker-dragend-store', 'data'),
@@ -164,15 +166,13 @@ def save_marker_positions(n_clicks, markers, current_id, stored_data, undo_click
         return dash.no_update, None, None, dash.no_update
 
     positions = extract_marker_positions(markers)
-    print("Positions", positions)
+    #print("Positions", positions)
     lats = [position[0] for position in positions]
     lons = [position[1] for position in positions]
-    #print(lats, lons)
-    #polygon = osm_mapper.create_shapely_polygon(positions)
-    #print(1)
-    #graph = osm_mapper.retrieve_street_graph(positions, polygon)
-    #print(2)
-    #street_list = osm_mapper.get_street_list_in_bbox(graph)
+
+    polygon = osm_mapper.create_shapely_polygon(positions)
+    graph = osm_mapper.retrieve_street_graph(positions, polygon)
+    street_list = osm_mapper.get_street_list_in_graph(graph)
     
     print("Street List", street_list)
     
@@ -193,6 +193,7 @@ def extract_marker_positions(markers):
           Input('save-button', 'n_clicks'),
           Input('coordinates-store', 'data'))
 def display_coordinates(n_clicks, stored_data):
+    print(stored_data)
     if not stored_data:
         return "No coordinates"
 
@@ -219,12 +220,12 @@ def display_coordinates(n_clicks, stored_data):
 )
 def toggle_map_style(n_clicks, current_state):
     if n_clicks is None:
-        return 'osm', None
+        return 'osm', dash.no_update
 
     if current_state == 'osm':
-        return 'satellite', "http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+        return 'satellite', dash.no_update
     else:
-        return 'osm', None
+        return 'osm', dash.no_update
     
 
 @app.callback(
@@ -244,7 +245,7 @@ def add_delete_markers(clickData, n_clicks, children):
         new_marker = dl.Marker(position=clickData, interactive=True, draggable=True)
         children.append(new_marker)
         
-    button_style = {'background-color': 'red'} if n_clicks % 2 == 1 else {'background-color': 'white'} 
+    button_style = {'background-color': 'red'} if n_clicks % 2 == 1 else {'background-color': 'gray'} 
     return children, button_style
     
 
