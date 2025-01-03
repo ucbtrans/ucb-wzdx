@@ -10,11 +10,43 @@ from shapely.ops import transform
 import pyproj
 from functools import partial
 import re
+import time
+from timeout import timeout
+
+# Lane Width Constant Values (Approximations so may need to change in the future)
+lane_width = 3.657      #12 feet to meters
+
+
+def refine_geometry(workzone_json):
+    coordinates = workzone_json['geometry']['coordinates']
+    target_street_name = workzone_json['properties']['core-details']['properties']['properties']['core_details']['road_names']
+    
+    if len(coordinates) == 2:
+        bounded_coords = buffer_linestring_geodesic(coordinates, 0.000001)
+    elif len(coordinates) > 2:
+        bounded_coords = buffer_linestring_geodesic(coordinates[0:2], 0.000001)
+    
+    polygon = create_shapely_polygon(bounded_coords)
+    street_graph = retrieve_scaled_street_graph(coordinates, polygon)
+    street_list = get_street_list_in_graph(street_graph)
+    feature = get_feature(street_graph, target_street_name)
+    
+    lane_count = get_lane_count_from_feature(feature)
+    centerline = get_target_street_centerline(feature)
+    
+    refined_polygon_verticies = buffer_linestring_geodesic(centerline, lane_count * lane_width)
+    
+    workzone_json['geometry']['coordinates'] = refined_polygon_verticies
+    
+    return workzone_json
+    
+    
 
 
 def create_shapely_polygon(markers):
     reversed_markers = [[lon, lat] for lat, lon in markers]
     return Polygon(reversed_markers)
+
 
 def retrieve_scaled_street_graph(markers, sh_polygon):
     if not sh_polygon.is_valid:
@@ -30,12 +62,12 @@ def retrieve_scaled_street_graph(markers, sh_polygon):
     polygon = wkt.loads(sh_polygon.wkt)
     
     print(list(bounded_street_graph.nodes))
-          
+    
     while (list(bounded_street_graph.nodes) == []):
         bounded_street_graph = generate_graph_from_polygon(sh_polygon)
         sh_polygon = sh_polygon.buffer(0.0008)
         print(list(bounded_street_graph.nodes))
-         
+    
     print("Graph:", bounded_street_graph)
     return bounded_street_graph
 
@@ -85,6 +117,16 @@ def get_feature(graph, street_name):
                 return feature
     else:
         return None
+    
+def get_lane_count_from_feature(feature):
+    try:
+        lane_count = int(feature['properties']['lanes'])
+    except:
+        lane_count = 0
+    return lane_count
+
+def get_target_street_centerline(feature):
+    return feature[geometry][coordinates]
     
 def check_first_word_match(str1, str2):
     if not str1.strip() or not str2.strip():  # Check for empty or whitespace-only strings
@@ -156,7 +198,7 @@ def buffer_linestring_geodesic(linestring_coords, buffer_distance):
     )
     wgs84_polygon = transform(project_to_wgs84, utm_polygon)
     
-    simplified_polygon = wgs84_polygon.simplify(tolerance=0.0001)
+    simplified_polygon = wgs84_polygon.simplify(tolerance=0.00001)
 
     # Return the polygon coordinates as a list
     return list(simplified_polygon.exterior.coords)
