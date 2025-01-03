@@ -61,8 +61,10 @@ app.layout = html.Div([
     ),
     dcc.Store(id='coordinates-store', data={'lat': [], 'lon': []}),
     dcc.Store(id='marker-dragend-store'),
+    dcc.Store(id='current-street-name'),
     html.Div(id='coordinates-display')
 ])
+
 
 # Callback to create markers and reset polyline when a record is selected
 @callback(
@@ -70,6 +72,7 @@ app.layout = html.Div([
     Output('work-zone-map', 'center'),
     Output('work-zone-map', 'zoom'),
     Output('json-output', 'children'),
+    Output('current-street-name', 'data'),
     Input('dropdown-selection', 'value'),
     State('work-zone-map', 'children'),
     State('coordinates-store', 'data'),
@@ -81,7 +84,7 @@ def create_markers(value, current_children, stored_data):
     try:
         geo_json_data = requests.get(f"http://128.32.234.154:8900/api/wzd/events/{value}").json()
     except Exception:
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     
     # Remove existing markers and polyline
     current_children = [
@@ -126,9 +129,12 @@ def create_markers(value, current_children, stored_data):
     
     new_center = [lats[0], lons[0]]
     new_zoom = 18
+    
+    street_name = geo_json_data['properties']['core-details']['properties']['properties']['core_details']['road_names']
 
+    print(street_name)
     # Return the updated TileLayer, polyline, and markers
-    return [dl.TileLayer(maxZoom=20), polygon, lg], new_center, new_zoom, html.Pre(json.dumps(geo_json_data, indent=2))
+    return [dl.TileLayer(maxZoom=20), polygon, lg], new_center, new_zoom, html.Pre(json.dumps(geo_json_data, indent=2)), street_name 
 
 @callback(
     Output('marker-dragend-store', 'data'),
@@ -157,8 +163,9 @@ def update_marker_positions(dragend_events, current_data):
           State('dropdown-selection', 'value'),
           State('coordinates-store', 'data'),
           Input('undo-button', 'n_clicks'),
+          State('current-street-name', 'data'),
           allow_duplicate=True)
-def save_marker_positions(n_clicks, markers, current_id, stored_data, undo_clicks):    
+def save_marker_positions(n_clicks, markers, current_id, stored_data, undo_clicks, street_name):    
     if undo_clicks is not None:
         return {'lat': None, 'lon': None}, None, None, dash.no_update
     
@@ -169,14 +176,26 @@ def save_marker_positions(n_clicks, markers, current_id, stored_data, undo_click
     #print("Positions", positions)
     lats = [position[0] for position in positions]
     lons = [position[1] for position in positions]
+    
+    print("Street name: ", street_name)
 
     polygon = osm_mapper.create_shapely_polygon(positions)
-    graph = osm_mapper.retrieve_street_graph(positions, polygon)
-    street_list = osm_mapper.get_street_list_in_graph(graph)
+    graph = osm_mapper.retrieve_scaled_street_graph(positions, polygon)
+    street_lst = osm_mapper.get_street_list_in_graph(graph)
+    street_feature = osm_mapper.get_feature(graph, street_name)
+    buffer_linestring = osm_mapper.buffer_linestring_geodesic(street_feature['geometry']['coordinates'], 3.6)
     
-    print("Street List", street_list)
+    print("Street List", street_feature)
+    print("Buffered", buffer_linestring)
+    
+    lons = [position[0] for position in buffer_linestring]
+    lats = [position[1] for position in buffer_linestring]
     
     polygon_positions = [[lats[i], lons[i]] for i in range(len(lats))]
+    
+    print(lats)
+    print(lons)
+    print(polygon_positions)
 
     
     # Store the marker positions with the current ID
