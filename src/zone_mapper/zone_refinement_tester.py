@@ -17,13 +17,17 @@ json_data = requests.get("http://128.32.234.154:8900/api/wzd/events/id").json()
 succesful_refinement_count = 0
 total_zones = 0
 
+unsuccessful_refinmennts = {}
+
 for zone_id in json_data['ids']:
     zone_geojson = requests.get(f"http://128.32.234.154:8900/api/wzd/events/{zone_id}").json()
     
     try:
-        refine_geometry_wrapper(zone_geojson)
+        osm_mapper.refine_geometry(zone_geojson)
         succesful_refinement_count+=1
-    except Exception as e: print(e)
+    except Exception as e: 
+        print(e)
+        unsuccessful_refinmennts.add(zone_id)
 
     
     total_zones += 1

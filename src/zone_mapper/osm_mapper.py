@@ -21,12 +21,15 @@ def refine_geometry(workzone_json):
     coordinates = workzone_json['geometry']['coordinates']
     target_street_name = workzone_json['properties']['core-details']['properties']['properties']['core_details']['road_names']
     
+    print(coordinates)
+    
     if len(coordinates) == 2:
         bounded_coords = buffer_linestring_geodesic(coordinates, 0.000001)
     elif len(coordinates) > 2:
-        bounded_coords = buffer_linestring_geodesic(coordinates[0:2], 0.000001)
+        print("More than 2 points!")
+        bounded_coords = coordinates
     
-    polygon = create_shapely_polygon(bounded_coords)
+    polygon = create_shapely_polygon_auto(bounded_coords)
     street_graph = retrieve_scaled_street_graph(coordinates, polygon)
     street_list = get_street_list_in_graph(street_graph)
     feature = get_feature(street_graph, target_street_name)
@@ -36,12 +39,15 @@ def refine_geometry(workzone_json):
     
     refined_polygon_verticies = buffer_linestring_geodesic(centerline, lane_count * lane_width)
     
+    print("Refinement worked!")
+    
     workzone_json['geometry']['coordinates'] = refined_polygon_verticies
     
     return workzone_json
     
     
-
+def create_shapely_polygon_auto(markers):
+    return Polygon(markers)
 
 def create_shapely_polygon(markers):
     reversed_markers = [[lon, lat] for lat, lon in markers]
@@ -63,17 +69,27 @@ def retrieve_scaled_street_graph(markers, sh_polygon):
     
     print(list(bounded_street_graph.nodes))
     
+    count = 1
+    
     while (list(bounded_street_graph.nodes) == []):
         bounded_street_graph = generate_graph_from_polygon(sh_polygon)
-        sh_polygon = sh_polygon.buffer(0.0008)
+        
+        buffer_distance = 0.0006 ** count
+        
+        sh_polygon = sh_polygon.buffer(buffer_distance)
         print(list(bounded_street_graph.nodes))
+        
+        count+=1
+        
+        if count > 5:
+            break
     
     print("Graph:", bounded_street_graph)
     return bounded_street_graph
 
 def generate_graph_from_polygon(sh_polygon):
     try:
-        graph = osm.graph.graph_from_polygon(sh_polygon, network_type = 'drive', truncate_by_edge=True)
+        graph = osm.graph.graph_from_polygon(sh_polygon, network_type = 'drive', truncate_by_edge=False)
         print("Success")
     except Exception as e:
         print("No able to produce graph: " + repr(e))
@@ -126,7 +142,7 @@ def get_lane_count_from_feature(feature):
     return lane_count
 
 def get_target_street_centerline(feature):
-    return feature[geometry][coordinates]
+    return feature['geometry']['coordinates']
     
 def check_first_word_match(str1, str2):
     if not str1.strip() or not str2.strip():  # Check for empty or whitespace-only strings

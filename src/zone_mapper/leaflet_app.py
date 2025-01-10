@@ -173,7 +173,7 @@ def save_marker_positions(n_clicks, markers, current_id, stored_data, undo_click
         return dash.no_update, None, None, dash.no_update
 
     positions = extract_marker_positions(markers)
-    #print("Positions", positions)
+    print("Positions: ", positions)
     lats = [position[0] for position in positions]
     lons = [position[1] for position in positions]
     
