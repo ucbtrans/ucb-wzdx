@@ -1,10 +1,12 @@
-from dash import Dash, html, dcc, callback, Output, Input, ALL, State, dash, ctx
+from dash import Dash, html, dcc, callback, Output, Input, ALL, State, dash, ctx, callback_context
 import dash_leaflet as dl
 from ipyleaflet import Map, Marker, Polyline, TileLayer, Polygon
 import pandas as pd
 import requests
 import json
 import osm_mapper
+from dash_resizable_panels import PanelGroup, Panel, PanelResizeHandle
+
 
 # Fetch the initial data
 json_data = requests.get("http://128.32.234.154:8900/api/wzd/events/id").json()
@@ -21,10 +23,11 @@ app.layout = html.Div([
                     html.Button("Add Marker", id="add-marker-button", n_clicks = 0, style={'margin-right': '5px', 'padding': '10px 15px'}),
                     html.Button("Toggle Map", id="toggle-map-style", style={'margin-right': '5px', 'padding': '10px 15px'}),
                     html.Button("Save", id="save-button", style={'margin-right': '5px', 'padding': '10px 15px'}),
+                    html.Button("Refine", id="refine-button", style={'margin-right': '5px', 'padding': '10px 15px'}),
                     html.Button("Publish", id="publish-button", style={'margin-right': '5px', 'padding': '10px 15px'}),
                     html.Button("Undo", id="undo-button", style={'padding': '10px 15px'})
                 ],
-                style={'float': 'right'}
+                style={'display': 'flex', 'justify-content': 'flex-end', 'gap': '5px'}
             )
         ],
         style={'display': 'flex', 'justify-content': 'space-between', "overflow-y": "scroll"}
@@ -32,30 +35,48 @@ app.layout = html.Div([
     dcc.Dropdown(df.ids.unique(), 'Canada', id='dropdown-selection'),
         html.Div(  # Wrap the map and JSON display in a div
         [
-            dl.Map(
-                id="work-zone-map",
-                style={'width': '1500px', 'height': '800px', 'display': 'inline-block'},  # Adjust width and add display property
-                center=[37.8715, -122.2730],  # Initial center
-                zoom=5,  # Initial zoom
+            PanelGroup(
+                id='panel-group',
                 children=[
-                    dl.TileLayer(id='tile-layer', className = 'osm'),
-                    dl.Polygon(id='current-polygon', positions=[]),  # Initialize the polyline
-                    dl.LayerGroup(id='marker-group')
-                ]
+                    Panel(
+                        id='panel-1',
+                        children=[
+                            dl.Map(
+                                id="work-zone-map",
+                                style={'width': '1500px', 'height': '1000px', 'display': 'inline-block'},  # Adjust width and add display property
+                                center=[37.8715, -122.2730],  # Initial center
+                                zoom=5,  # Initial zoom
+                                children=[
+                                    dl.LayersControl([dl.BaseLayer(
+                                        dl.TileLayer(id='satellite view', url='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'), name='satelitte'),
+                                        dl.BaseLayer(dl.TileLayer(id='tile-layer', maxZoom = 20), name='osm', checked=True)], position='topleft'),
+                                    dl.Polygon(id='current-polygon', positions=[]),  # Initialize the polyline
+                                    dl.LayerGroup(id='marker-group')
+                                ],
+                            )
+                        ]
+                    ),
+                    PanelResizeHandle(html.Div(style={"backgroundColor": "grey", "height": "100%", "width": "5px"})),
+                    Panel(
+                        id='panel-2',
+                        children=[
+                            html.Div([
+                                html.H2("GeoJSON Data", style={'text-align': 'center'}),
+                                html.Div(id='json-output', style={'display': 'inline-block', 'width': '700px', 'vertical-align': 'top', 
+                                        'padding': '10px', 'resize': 'horizontal', 'overflow': 'auto'}),  # Add JSON output div
+                                dcc.Store(id='width-store', data=700)
+                            ],
+                            style={
+                                    'display': 'inline-block', 
+                                    'width': '700px', 
+                                    'vertical-align': 'top',
+                                    'border': '1px solid gray'
+                                }
+                            )
+                        ]
+                    )
+                ], direction = 'horizontal'
             ),
-            html.Div([
-                html.H2("GeoJSON Data", style={'text-align': 'center'}),
-                html.Div(id='json-output', style={'display': 'inline-block', 'width': '700px', 'vertical-align': 'top', 
-                        'padding': '10px'}),  # Add JSON output div
-            ],
-            style={
-                    'display': 'inline-block', 
-                    'width': '700px', 
-                    'vertical-align': 'top',
-                    'border': '1px solid gray'
-                }
-            )
-
         ],
         style={'display': 'flex'}  # Use flexbox for layout
     ),
@@ -68,8 +89,10 @@ app.layout = html.Div([
 
 # Callback to create markers and reset polyline when a record is selected
 @callback(
-    Output('work-zone-map', 'children'),
-    Output('work-zone-map', 'center'),
+    #Output('work-zone-map', 'children'),
+    Output('marker-group', 'children', allow_duplicate=True),
+    Output('current-polygon', 'positions', allow_duplicate=True),
+    #Output('work-zone-map', 'center'),
     Output('work-zone-map', 'zoom'),
     Output('json-output', 'children'),
     Output('current-street-name', 'data'),
@@ -79,6 +102,12 @@ app.layout = html.Div([
     prevent_initial_call=True
 )
 def create_markers(value, current_children, stored_data):
+    ctx = callback_context
+    if not ctx.triggered:
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+    triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    if triggered_id != 'dropdown-selection':
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update  # Return 6 no_update
     
     # Fetch new data based on the selected dropdown value
     try:
@@ -127,14 +156,21 @@ def create_markers(value, current_children, stored_data):
     # Create the polyline connecting the markers
     polygon = dl.Polygon(id='current-polygon', positions=list(zip(lats, lons)))
     
-    new_center = [lats[0], lons[0]]
+    new_center = [sum(lats) / len(lats), sum(lons) / len(lons)]    
     new_zoom = 18
     
     street_name = geo_json_data['properties']['core-details']['properties']['properties']['core_details']['road_names']
-
-    print(street_name)
+    
     # Return the updated TileLayer, polyline, and markers
-    return [dl.TileLayer(maxZoom=20), polygon, lg], new_center, new_zoom, html.Pre(json.dumps(geo_json_data, indent=2)), street_name 
+    return markers, polygon.positions, new_zoom, html.Pre(json.dumps(geo_json_data, indent=2)), street_name
+
+@callback(
+    Output('work-zone-map', 'center'),
+    Input('marker-group', 'children'),
+    prevent_initial_call=True
+)
+def update_map_center(markers):
+    return markers[0]['props']['position']
 
 @callback(
     Output('marker-dragend-store', 'data'),
@@ -156,21 +192,22 @@ def update_marker_positions(dragend_events, current_data):
 
 @callback(Output('coordinates-store', 'data'),
           Output('save-button', 'n_clicks'),
+          Output('refine-button', 'n_clicks'),
           Output('undo-button', 'n_clicks'),
           Output('current-polygon', 'positions'),
           Input('save-button', 'n_clicks'),
+          Input('refine-button', 'n_clicks'),
           Input('marker-group', 'children'),
           State('dropdown-selection', 'value'),
           State('coordinates-store', 'data'),
           Input('undo-button', 'n_clicks'),
-          State('current-street-name', 'data'),
-          allow_duplicate=True)
-def save_marker_positions(n_clicks, markers, current_id, stored_data, undo_clicks, street_name):    
+          State('current-street-name', 'data'))
+def save_marker_positions(n_clicks, refine_n_clicks, markers, current_id, stored_data, undo_clicks, street_name):    
     if undo_clicks is not None:
         return {'lat': None, 'lon': None}, None, None, dash.no_update
     
-    if n_clicks is None:
-        return dash.no_update, None, None, dash.no_update
+    #if n_clicks is None:
+    #    return dash.no_update, None, None, dash.no_update
 
     positions = extract_marker_positions(markers)
     print("Positions: ", positions)
@@ -178,28 +215,41 @@ def save_marker_positions(n_clicks, markers, current_id, stored_data, undo_click
     lons = [position[1] for position in positions]
     
     print("Street name: ", street_name)
+    if refine_n_clicks != None:
+        if len(positions) == 2:
+            positions = [[lon, lat] for lat, lon in positions]
+            positions = osm_mapper.buffer_linestring_geodesic(positions, 0.000001)
+            positions = [[lon, lat] for lat, lon in positions]
+        polygon = osm_mapper.create_shapely_polygon(positions)
+        graph = osm_mapper.retrieve_scaled_street_graph(positions, polygon)
+        street_lst = osm_mapper.get_street_list_in_graph(graph)
+        street_feature = osm_mapper.get_feature(graph, street_name)
+        buffer_linestring = osm_mapper.buffer_linestring_geodesic(street_feature['geometry']['coordinates'], 3.6)
+        
+        print("Street List", street_feature)
+        print("Buffered", buffer_linestring)
+        
+        lons = [position[0] for position in buffer_linestring]
+        lats = [position[1] for position in buffer_linestring]
+        
+        polygon_positions = [[lats[i], lons[i]] for i in range(len(lats))]
+        
+        return {**stored_data, current_id: {'lat': lats, 'lon': lons}}, None, None, None, polygon_positions
+    
+    if n_clicks is not None:
+        lats = [position[0] for position in positions]
+        lons = [position[1] for position in positions]
+        polygon_positions = [[lats[i], lons[i]] for i in range(len(lats))]
 
-    polygon = osm_mapper.create_shapely_polygon(positions)
-    graph = osm_mapper.retrieve_scaled_street_graph(positions, polygon)
-    street_lst = osm_mapper.get_street_list_in_graph(graph)
-    street_feature = osm_mapper.get_feature(graph, street_name)
-    buffer_linestring = osm_mapper.buffer_linestring_geodesic(street_feature['geometry']['coordinates'], 3.6)
-    
-    print("Street List", street_feature)
-    print("Buffered", buffer_linestring)
-    
-    lons = [position[0] for position in buffer_linestring]
-    lats = [position[1] for position in buffer_linestring]
-    
-    polygon_positions = [[lats[i], lons[i]] for i in range(len(lats))]
-    
-    print(lats)
-    print(lons)
-    print(polygon_positions)
+        print(lats)
+        print(lons)
+        print(polygon_positions)
 
-    
+        # Store the marker positions with the current ID
+        return {**stored_data, current_id: {'lat': lats, 'lon': lons}}, None, None, None, polygon_positions
+
     # Store the marker positions with the current ID
-    return {**stored_data, current_id: {'lat': lats, 'lon': lons}}, None, None, polygon_positions
+    return dash.no_update, None, None, None, dash.no_update
 
 def extract_marker_positions(markers):
   positions = []
@@ -266,6 +316,13 @@ def add_delete_markers(clickData, n_clicks, children):
         
     button_style = {'background-color': 'red'} if n_clicks % 2 == 1 else {'background-color': 'gray'} 
     return children, button_style
+
+@app.callback(
+    Output('width-store', 'data'),
+    Input('json-output', 'style')
+)
+def update_width_store(style):
+    return style.get('width', '700px')
     
 
 if __name__ == '__main__':

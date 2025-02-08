@@ -150,6 +150,9 @@ def check_first_word_match(str1, str2):
 
     # Use regular expressions for more robust word extraction
     # \b matches word boundaries, \w+ matches one or more word characters
+    str1 = re.sub(r'[^a-zA-Z0-9]', '', str1)
+    str2 = re.sub(r'[^a-zA-Z0-9]', '', str2)
+    
     match1 = re.match(r"\b(\w+)", str1)
     match2 = re.match(r"\b(\w+)", str2)
 
