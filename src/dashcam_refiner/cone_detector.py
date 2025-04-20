@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-#from ultralytics import YOLO
+from ultralytics import YOLO
 import matplotlib.patches as patches
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
@@ -11,6 +11,7 @@ import os
 import xml.etree.ElementTree as ET
 import gpxpy
 import gpxpy.gpx
+import math
 
 
 
@@ -77,9 +78,10 @@ def run_YOLO_frame(model_path):
         model_type="ultralytics",
         model_path=model_path,
         confidence_threshold=0.6,
-        device="cpu",  # or 'cuda:0'
+        device="cpu",
     )
     #currModel = YOLO(model_path)
+    bounding_boxes_frames = []
     for i in range(0, 6):
         result = get_sliced_prediction(
             f"/Users/ashwinbardhwaj/Documents/PATH/Work Zone Project/ucb-wzdx/src/dashcam_refiner/dash_videos/Bancroft_Vid_2/Frame_Images/frame{i}.jpg",
@@ -94,26 +96,42 @@ def run_YOLO_frame(model_path):
         #results = currModel(f"/Users/ashwinbardhwaj/Documents/PATH/Work Zone Project/ucb-wzdx/src/dashcam_refiner/dash_videos/Bancroft_Vid_2/Frame_Images/frame{i}.jpg"
         #                    ,save=True, project="runs/detect", name="inference", exist_ok=True)
         #print(results)
+        bounding_boxes = []
+        for prediction in result.object_prediction_list:
+            bbox = prediction.bbox.to_xyxy() #Convert to [x_min, y_min, x_max, y_max] format
+            bounding_boxes.append(bbox)
+        bounding_boxes_frames.append(bounding_boxes)
+    return bounding_boxes_frames
         
-def calculate_angle(box):
+def calculate_angle(box, image_path):
     if not isinstance(box, (list, tuple)) or len(box) != 4:
         return None
+    
+    img = cv2.imread(image_path)
+    if img is None:
+        print(f"Error: Could not read image at {image_path}")
+        return None, None
+
+    image_height, image_width, _ = img.shape
 
     x_min, y_min, x_max, y_max = box
-    mid_x = (x_min + x_max) / 2
-    mid_y = (y_min + y_max) / 2
+    mid_x = round((x_min + x_max) / 2)
+    mid_y = round((y_min + y_max) / 2)
 
-    # Vector from origin (0, 0) to midpoint
-    vector = np.array([mid_x, mid_y])
+    bottom_center_x = int(image_width / 2)
+    bottom_center_y = int(image_height)
 
-    # Horizontal vector
+    vector = np.array([mid_x - bottom_center_x, mid_y - bottom_center_y])
+
     horizontal_vector = np.array([1, 0])
 
-    # Calculate the angle using arctan2
-    angle_rad = np.arctan2(mid_y, mid_x)
+    angle_rad = np.arctan2(vector[1], vector[0])
     angle_deg = np.degrees(angle_rad)
+    #import pdb; pdb.set_trace()
+    cv2.arrowedLine(img, (bottom_center_x, bottom_center_y), (mid_x, mid_y), (0, 255, 0), 2)
 
-    return angle_deg
+
+    return angle_deg, img
 
 def rename_file(directory, old_name, new_name):
     old_path = os.path.join(directory, old_name)
@@ -166,14 +184,56 @@ def distance_spherical_law_cosines(lat1, lon1, lat2, lon2):
 
 def compute_object_distance(delta_x, angle_1, angle_2):
     angle_3 = 180 - angle_1 - angle_2
-    sin_1 = np.sin((np.pi * angle_1) / 180)
-    sin_2 = np.sin((np.pi * angle_2) / 180)
-    sin_3 = np.sin((np.pi * angle_3) / 180)
+    sin_1 = np.sin(np.deg2rad(angle_1))
+    sin_2 = np.sin(np.deg2rad(angle_2))
+    sin_3 = np.sin(np.deg2rad(angle_3))
 
-    dist_1 = (delta_x / sin_3) * sin_1
-    dist_2 = (delta_x / sin_3) * sin_2
+    dist_1 = (delta_x / sin_3) * sin_2
+    dist_2 = (delta_x / sin_3) * sin_1
+    
+    return dist_1, dist_2
+    
+def run_cone_detection():
+    bounding_boxes = run_YOLO_frame("/Users/ashwinbardhwaj/Documents/PATH/Work Zone Project/ucb-wzdx/src/dashcam_refiner/runs/detect/models/train8/weights/best.pt")
+    frame_1_angle, image_with_vector_1 = calculate_angle(bounding_boxes[3][1], "/Users/ashwinbardhwaj/Documents/PATH/Work Zone Project/ucb-wzdx/src/dashcam_refiner/runs/detect/inference/predicted_frame3.png")
+    
+    frame_1_angle = (-1) * frame_1_angle
+    
+    cv2.imshow(f"Image with Vector: {frame_1_angle}", image_with_vector_1)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    
+    frame_2_angle, image_with_vector_2 = calculate_angle(bounding_boxes[4][0], "/Users/ashwinbardhwaj/Documents/PATH/Work Zone Project/ucb-wzdx/src/dashcam_refiner/runs/detect/inference/predicted_frame4.png")
+   
+    frame_2_angle = (-1) * frame_2_angle
+   
+    cv2.imshow(f"Image with Vector: {frame_2_angle}", image_with_vector_2)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    
+    frame_1_angle = 90 - frame_1_angle
+    frame_2_angle = 90 + frame_2_angle
+    
+    print(f"Cone angle from frame 1: {frame_1_angle}")
+    print(f"Cone angle from frame 2: {frame_2_angle}")
+
     
     
+    coord_readings = get_source_coords("Bancroft_Videos2_Decoded.txt")
+    
+    frame_1_pos = coord_readings[2]
+    frame_2_pos = coord_readings[3]
+    
+    print(f"Frame 1 vehicle position: {frame_1_pos}")
+    print(f"Frame 2 vehicle position: {frame_2_pos}")
+    
+    delta_x = distance_spherical_law_cosines(frame_1_pos[0], frame_1_pos[1], frame_2_pos[0], frame_2_pos[1])
+    
+    print(f"Distacne vehicle travelled between two frames: {delta_x}")
+    
+    dist_1, dist_2 = compute_object_distance(delta_x, frame_1_angle, frame_2_angle)
+    
+    print(f"Distance of cone from the first and second frames: {dist_1}, {dist_2}")
 
     
 if __name__ == "__main__":
@@ -187,7 +247,6 @@ if __name__ == "__main__":
     
     #plot_Bounding_Box(img_path, bounds)
     #train_YOLO_model("traffic_cone.yaml")
-    #run_YOLO_frame("/Users/ashwinbardhwaj/Documents/PATH/Work Zone Project/ucb-wzdx/runs/detect/train8/weights/best.pt")
-    coord_readings = get_source_coords_at_frame("Bancroft_Videos2_Decoded.txt")
+    run_cone_detection()
     
         

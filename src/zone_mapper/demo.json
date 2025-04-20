@@ -1,0 +1,36 @@
+{
+    "id": "Demo_Site",
+    "type": "object",
+    "properties": {
+        "core-details": {
+            "id": "Demo_Site",
+            "type": "Demo_Site",
+            "properties": {
+                "properties": {
+                    "core_details": {
+                        "road_names": "College Avenue",
+                        "direction": "Demo_Site",
+                        "name": "Demo_Site",
+                        "description": "Demo_Site",
+                        "creation_date": "Demo_Site",
+                        "update_date": "Demo_Site"
+                    }
+                }
+            }
+        }
+    },
+    "geometry": {
+        "type": "Demo_Site",
+        "coordinates": [[-122.254437,37.868489], [-122.254582, 37.869149]]
+    },
+    "definitions": {
+        "Work Zone Road Event": {
+            "properties": {
+                "start_date": 0,
+                "end_date": 0,
+                "is_start_date_verified": 0,
+                "is_end_date_verified": 0
+            }
+        }
+    }
+}

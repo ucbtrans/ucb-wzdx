@@ -6,11 +6,15 @@ import requests
 import json
 import osm_mapper
 from dash_resizable_panels import PanelGroup, Panel, PanelResizeHandle
+import numpy as np
 
 
 # Fetch the initial data
 json_data = requests.get("http://128.32.234.154:8900/api/wzd/events/id").json()
 df = pd.DataFrame(json_data)
+names = list(df.ids.unique())
+names.insert(0, "Demo Site")
+nmaes = np.array(names)
 
 app = Dash(__name__)
 
@@ -24,6 +28,7 @@ app.layout = html.Div([
                     html.Button("Toggle Map", id="toggle-map-style", style={'margin-right': '5px', 'padding': '10px 15px'}),
                     html.Button("Save", id="save-button", style={'margin-right': '5px', 'padding': '10px 15px'}),
                     html.Button("Refine", id="refine-button", style={'margin-right': '5px', 'padding': '10px 15px'}),
+                    html.Button("Place Cones", id="cone-button", style={'margin-right': '5px', 'padding': '10px 15px'}),
                     html.Button("Publish", id="publish-button", style={'margin-right': '5px', 'padding': '10px 15px'}),
                     html.Button("Undo", id="undo-button", style={'padding': '10px 15px'})
                 ],
@@ -32,7 +37,7 @@ app.layout = html.Div([
         ],
         style={'display': 'flex', 'justify-content': 'space-between', "overflow-y": "scroll"}
     ),
-    dcc.Dropdown(df.ids.unique(), 'Canada', id='dropdown-selection'),
+    dcc.Dropdown(names, 'Canada', id='dropdown-selection'),
         html.Div(  # Wrap the map and JSON display in a div
         [
             PanelGroup(
@@ -83,7 +88,9 @@ app.layout = html.Div([
     dcc.Store(id='coordinates-store', data={'lat': [], 'lon': []}),
     dcc.Store(id='marker-dragend-store'),
     dcc.Store(id='current-street-name'),
-    html.Div(id='coordinates-display')
+    html.Div(id='coordinates-display'),
+    html.Div(id='video-container'), # Add a div to hold the video
+    dcc.Store(id="video-url-store")
 ])
 
 
@@ -110,10 +117,15 @@ def create_markers(value, current_children, stored_data):
         return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update  # Return 6 no_update
     
     # Fetch new data based on the selected dropdown value
-    try:
-        geo_json_data = requests.get(f"http://128.32.234.154:8900/api/wzd/events/{value}").json()
-    except Exception:
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+    # Demo Code
+    if value == "Demo Site":
+        with open("demo.json", 'r', encoding='utf-8') as f:
+            geo_json_data = json.load(f)
+    else:
+        try:
+            geo_json_data = requests.get(f"http://128.32.234.154:8900/api/wzd/events/{value}").json()
+        except Exception:
+            return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     
     # Remove existing markers and polyline
     current_children = [
@@ -214,6 +226,12 @@ def save_marker_positions(n_clicks, refine_n_clicks, markers, current_id, stored
     lats = [position[0] for position in positions]
     lons = [position[1] for position in positions]
     
+    #if current_id[0:2] == "TM":
+    #    positions = [position[::-1] for position in positions]
+    #    positions = osm_mapper.buffer_linestring_geodesic(positions, 4)
+    #    refine_n_clicks = None
+    #    n_clicks = 1
+    
     print("Street name: ", street_name)
     if refine_n_clicks != None:
         if len(positions) == 2:
@@ -282,6 +300,30 @@ def display_coordinates(n_clicks, stored_data):
     return output
 
 @app.callback(
+    Output("marker-group", 'children', allow_duplicate=True),
+    Input("cone-button", 'n_clicks'),
+    prevent_initial_call=True
+)
+def add_video_markers(clicks):
+    markers = [dl.Marker(position=[37.868840,-122.254515],
+                    interactive=True,
+                    draggable=True,
+                    id={'type': 'marker', 'index': 0}),
+               dl.Marker(position=[37.868649,-122.254466],
+                    interactive=True,
+                    draggable=True,
+                    id={'type': 'marker', 'index': 1}),
+               dl.Marker(position=[37.868399,-122.254402],
+                    interactive=True,
+                    draggable=True,
+                    id={'type': 'marker', 'index': 2}),
+               dl.Marker(position=[37.869217,-122.254560],
+                    interactive=True,
+                    draggable=True,
+                    id={'type': 'marker', 'index': 3})]
+    return markers
+
+@app.callback(
     Output("tile-layer", "className"),
     Output("tile-layer", "url"),
     Input("toggle-map-style", "n_clicks"),
@@ -323,6 +365,45 @@ def add_delete_markers(clickData, n_clicks, children):
 )
 def update_width_store(style):
     return style.get('width', '700px')
+
+app.clientside_callback(
+    """
+    function(message) {
+        if (message && message.data && message.data.type === 'videoUrl') {
+            const videoUrl = message.data.url;
+            const videoElement = document.createElement('video');
+            videoElement.src = videoUrl;
+            videoElement.controls = true;
+            videoElement.style.width = '100%';
+            videoElement.style.height = 'auto';
+            const container = document.getElementById('video-container');
+            container.innerHTML = '';
+            container.appendChild(videoElement);
+        }
+        return window.dash_clientside.no_update;
+    }
+    """,
+    Output('video-container', 'children'),
+    Input('video-url-store', 'data'),
+    prevent_initial_call=True,
+)
+
+app.clientside_callback(
+    """
+    function(_, message) {
+      if(message && message.data && message.data.type === 'videoUrl') {
+        return message.data
+      }
+      return window.dash_clientside.no_update
+    }
+    """,
+    Output("video-url-store", "data"),
+    Input("video-url-store", "data"),
+    State("video-url-store", "data"),
+    prevent_initial_call=True,
+    clientside_prop_name=["message", "event"]
+)
+
     
 
 if __name__ == '__main__':
