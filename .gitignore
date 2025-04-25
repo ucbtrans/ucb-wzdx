@@ -9,41 +9,41 @@ dash_videos/
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+src/MapperWebApp/node_modules
+/src/MapperWebApp/.pnp
+/src/MapperWebApp/.pnp.*
+/src/MapperWebApp/.yarn/*
+/src/MapperWebApp/!.yarn/patches
+/src/MapperWebApp/!.yarn/plugins
+/src/MapperWebApp/!.yarn/releases
+/src/MapperWebApp/!.yarn/versions
 
 # testing
-/coverage
+/src/MapperWebApp/coverage
 
 # next.js
-/.next/
-/out/
+/src/MapperWebApp/.next
+/src/MapperWebApp/out/
 
 # production
-/build
+/src/MapperWebApp/build
 
 # misc
-.DS_Store
-*.pem
+/src/MapperWebApp/.DS_Store
+/src/MapperWebApp/*.pem
 
 # debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
+/src/MapperWebApp/npm-debug.log*
+/src/MapperWebApp/yarn-debug.log*
+/src/MapperWebApp/yarn-error.log*
+/src/MapperWebApp/.pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
 .env*
 
 # vercel
-.vercel
+/src/MapperWebApp/.vercel
 
 # typescript
-*.tsbuildinfo
-next-env.d.ts
+/src/MapperWebApp/*.tsbuildinfo
+/src/MapperWebApp/next-env.d.ts
