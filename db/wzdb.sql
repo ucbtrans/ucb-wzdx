@@ -4,6 +4,7 @@
 -- ------------------------------------------------------
 -- Server version	5.7.40-0ubuntu0.18.04.1
 
+SET foreign_key_checks = 0;
 
 --
 -- Table structure for table `lane`
@@ -142,3 +143,6 @@ CREATE TABLE `worker_presence` (
   CONSTRAINT `id5` FOREIGN KEY (`road_event_feature_id`) REFERENCES `road_event_feature` (`id`) ON DELETE CASCADE ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COMMENT='Information about the presence of workers in the WZ.';
 
+
+
+SET foreign_key_checks = 1;
