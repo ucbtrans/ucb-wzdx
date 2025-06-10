@@ -143,32 +143,14 @@ def update_road_event(mydb, re, is_new=True):
     try:
         mycursor.execute(sql)
     except Exception as e:
-        raise Exception("update_road_event(): SQL: {} ; Error: {}".format(sql, str(e)))
+        logging.error("update_road_event(): SQL: {} ; Error: {}".format(sql, str(e)))
+        logging.error("update_road_event(): Failed to update core details for road event ID: {}".format(re_id))
 
-    try:
-        update_work_zone_event(mycursor, re)
-    except Exception as e:
-        raise Exception("update_work_zone_event() failed: {}".format(str(e)))
-    
-    try:
-        update_core_details(mycursor, re)
-    except Exception as e:
-        raise Exception("update_core_details() failed: {}".format(str(e)))
-    
-    try:
-        update_lanes(mycursor, re)
-    except Exception as e:
-        raise Exception("update_lanes() failed: {}".format(str(e)))
-    
-    try:
-        update_type_of_work(mycursor, re)
-    except Exception as e:
-        raise Exception("update_type_of_work() failed: {}".format(str(e)))
-    
-    try:
-        update_worker_presence(mycursor, re)
-    except Exception as e:
-        raise Exception("update_worker_presence() failed: {}".format(str(e)))
+    update_work_zone_event(mycursor, re)
+    update_core_details(mycursor, re)
+    update_lanes(mycursor, re)
+    update_type_of_work(mycursor, re)
+    update_worker_presence(mycursor, re)
 
     mydb.commit()
     
@@ -267,7 +249,8 @@ def update_work_zone_event(mycursor, re):
     try:
         mycursor.execute(sql)
     except Exception as e:
-        raise Exception("SQL: {} ; Error: {}".format(sql, str(e)))
+        logging.error("update_work_zone_event(): SQL: {} ; Error: {}".format(sql, str(e)))
+        logging.error("update_work_zone_event(): Failed to update core details for road event ID: {}".format(re_id))
 
     return
 
@@ -339,7 +322,11 @@ def update_core_details(mycursor, re):
     sql = "INSERT INTO road_event_core_details VALUES('{}','{}','{}','{}','{}', {},{},{},{})".format(
         re_id, e_type, ds_id, r_names, direction, name, description, created, updated
     )
-    mycursor.execute(sql)
+    try:
+        mycursor.execute(sql)
+    except Exception as e:
+        logging.error("update_core_details(): SQL: {} ; Error: {}".format(sql, str(e)))
+        logging.error("update_core_details(): Failed to update core details for road event ID: {}".format(re_id))
 
     return
 
@@ -381,7 +368,11 @@ def update_lanes(mycursor, re):
             status = "'" + li[k] + "'"
 
         sql = "INSERT INTO lane VALUES('{}',{},{},{})".format(re_id, order, l_type, status)
-        mycursor.execute(sql)
+        try:
+            mycursor.execute(sql)
+        except Exception as e:
+            logging.error("update_lanes(): SQL: {} ; Error: {}".format(sql, str(e)))
+            logging.error("update_lanes(): Failed to update core details for road event ID: {}".format(re_id))
 
     return
 
@@ -418,7 +409,11 @@ def update_type_of_work(mycursor, re):
             iac = tow[k]
 
         sql = "INSERT INTO type_of_work VALUES('{}',{},{})".format(re_id, tn, iac)
-        mycursor.execute(sql)
+        try:
+            mycursor.execute(sql)
+        except Exception as e:
+            logging.error("update_type_of_work(): SQL: {} ; Error: {}".format(sql, str(e)))
+            logging.error("update_type_of_work(): Failed to update core details for road event ID: {}".format(re_id))
 
     return
 
@@ -477,7 +472,12 @@ def update_worker_presence(mycursor, re):
     sql = "INSERT INTO worker_presence VALUES('{}',{}, {},{},{},{})".format(
         re_id, awp, definition, method, last_confirmed, confidence
     )
-    mycursor.execute(sql)
+    try:
+        mycursor.execute(sql)
+    except Exception as e:
+        logging.error("update_worker_presence(): SQL: {} ; Error: {}".format(sql, str(e)))
+        logging.error("update_worker_presence(): Failed to update core details for road event ID: {}".format(re_id))
+
 
     return
 
