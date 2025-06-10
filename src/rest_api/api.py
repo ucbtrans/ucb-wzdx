@@ -146,7 +146,8 @@ def post_wzd_record():
    update_road_event(g.db, json, is_new = False)
 
 if __name__ == '__main__':
-   app.run(host="128.32.234.154", port=8900)
+   #app.run(host="128.32.234.154", port=8900)
+   app.run(host="98.85.181.13", port=8900)
 
 #if __name__ == '__main__':
 #   app.run(port=8900)
