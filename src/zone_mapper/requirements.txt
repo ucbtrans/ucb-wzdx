@@ -1,0 +1,13 @@
+dash
+dash-leaflet
+ipyleaflet
+pandas
+requests
+dash-resizable-panels
+numpy
+osmnx
+geopandas
+shapely
+pyproj
+networkx
+timeout

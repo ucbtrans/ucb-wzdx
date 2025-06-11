@@ -10,7 +10,8 @@ import numpy as np
 
 
 # Fetch the initial data
-json_data = requests.get("http://128.32.234.154:8900/api/wzd/events/id").json()
+#json_data = requests.get("http://128.32.234.154:8900/api/wzd/events/id").json()
+json_data = requests.get("http://98.85.181.13:8900/api/wzd/events/id").json()
 df = pd.DataFrame(json_data)
 names = list(df.ids.unique())
 names.insert(0, "Demo Site")
@@ -407,4 +408,5 @@ app.clientside_callback(
     
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    #app.run_server(debug=True)
+    app.run(host="0.0.0.0", port=8888, debug=True, use_reloader=False)  # Set debug=True for development
