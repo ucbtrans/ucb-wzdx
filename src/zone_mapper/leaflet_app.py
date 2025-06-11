@@ -409,4 +409,4 @@ app.clientside_callback(
 
 if __name__ == '__main__':
     #app.run_server(debug=True)
-    app.run(host="0.0.0.0", port=8888, debug=True, use_reloader=False)  # Set debug=True for development
+    app.run(host="0.0.0.0", port=8901, debug=True, use_reloader=False)  # Set debug=True for development
