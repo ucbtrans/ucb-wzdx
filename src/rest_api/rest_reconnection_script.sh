@@ -11,7 +11,7 @@ if [ -z "$PORTSTR" ]; then
 	cd $SRCDIR
 	source "$SRCDIR"/.venv/bin/activate
 	echo "Starting WZDx REST API..."
-	nohup python3.8 $RESTAPI >nohup.out &
+	nohup python3 $RESTAPI >nohup.out &
 	deactivate
 else
 	echo "WZDx REST API is already running..."
