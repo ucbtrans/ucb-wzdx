@@ -192,7 +192,7 @@ export default function HomePage() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await fetch(`http://128.32.234.154:8900/api/wzd/events/${selectedId}`);
+                const response = await fetch(`http://98.85.181.13:8900/api/wzd/events/${selectedId}`);
                 if (!response.ok) {
                   throw new Error(`HTTP error! Status: ${response.status}`);
                 }

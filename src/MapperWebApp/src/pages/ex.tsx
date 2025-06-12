@@ -21,7 +21,7 @@ export default function ServicesPage() {
       const videoUrl = URL.createObjectURL(file); // Create a temporary URL
       iframeRef.current.contentWindow.postMessage(
         { type: 'videoUrl', url: videoUrl },
-        'http://localhost:8050' // Replace with your Dash app's origin
+        'http://98.85.181.13:8902' // Replace with your Dash app's origin
       );
     }
   };
@@ -44,7 +44,7 @@ export default function ServicesPage() {
             <div className="lg:w-1/2">
               <iframe
                 ref={iframeRef}
-                src="http://localhost:8050" // Dash Leaflet app URL
+                src="http://98.85.181.13:8902" // Dash Leaflet app URL
                 style={{ width: '100%', height: '1300px', border: 'none' }}
               />
             </div>

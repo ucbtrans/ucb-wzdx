@@ -40,7 +40,7 @@ export default function ServicesPage() {
       const videoUrl = URL.createObjectURL(file);
       iframeRef.current.contentWindow.postMessage(
         { type: 'videoUrl', url: videoUrl },
-        'http://localhost:8050'
+        'http://98.85.181.13:8902'
       );
     }
   };
