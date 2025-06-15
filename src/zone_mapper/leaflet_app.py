@@ -10,8 +10,9 @@ import numpy as np
 
 
 # Fetch the initial data
+api_server = "http://23.22.241.10:8900"
 #json_data = requests.get("http://128.32.234.154:8900/api/wzd/events/id").json()
-json_data = requests.get("http://98.85.181.13:8900/api/wzd/events/id").json()
+json_data = requests.get(f"{api_server}/api/wzd/events/id").json()
 df = pd.DataFrame(json_data)
 names = list(df.ids.unique())
 names.insert(0, "Demo Site")
@@ -124,7 +125,7 @@ def create_markers(value, current_children, stored_data):
             geo_json_data = json.load(f)
     else:
         try:
-            geo_json_data = requests.get(f"http://128.32.234.154:8900/api/wzd/events/{value}").json()
+            geo_json_data = requests.get(f"{api_server}/api/wzd/events/{value}").json()
         except Exception:
             return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     

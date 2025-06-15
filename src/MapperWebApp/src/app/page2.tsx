@@ -41,7 +41,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mt-8 lg:mt-0 flex w-full">
               <iframe
-                src="http://98.85.181.13:8902"
+                src="http://23.22.241.10:8901"
                 style={{ width: '100%', height: '1300px', border: 'none' }}
               />
           </div>
