@@ -2,7 +2,7 @@
 
 #export SRCDIR="/home/alexk/ucb-wzdx/src/zone_mapper"
 export SRCDIR="/home/alex/ucb-wzdx/src"
-export WZMAPPER="$SRCDIR"/leaflet_app.py
+export WZMAPPER="$SRCDIR"/zone_mapper/leaflet_app.py
 
 #export PORTSTR=`netstat -nlp |grep "128.32.234.154:8901"`
 export PORTSTR=`netstat -nlp |grep "0.0.0.0:8901`
