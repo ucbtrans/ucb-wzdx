@@ -3,7 +3,6 @@
 export SRCDIR="/home/alexk/ucb-wzdx/src"
 export WZMAPPER="$SRCDIR"/zone_mapper/leaflet_app.py
 
-#export PORTSTR=`netstat -nlp |grep "128.32.234.154:8901"`
 export PORTSTR=`netstat -nlp |grep "0.0.0.0:8901`
 
 if [ -z "$PORTSTR" ]; then
