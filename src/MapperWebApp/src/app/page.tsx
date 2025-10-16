@@ -47,7 +47,7 @@ export default function HomePage() {
         <section className="py-16 bg-white w-full">
             <div className="mt-8 lg:mt-0 flex w-full">
               <iframe
-                src="http://23.22.241.10:8901"
+                src="http://98.89.247.208:8901"
                 style={{ width: '100%', height: '1300px', border: 'none' }}
               />
             </div>

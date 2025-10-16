@@ -40,7 +40,7 @@ export default function ServicesPage() {
       const videoUrl = URL.createObjectURL(file);
       iframeRef.current.contentWindow.postMessage(
         { type: 'videoUrl', url: videoUrl },
-        'http://23.22.241.10:8902'
+        'http://98.89.247.208:8902'
       );
     }
   };
@@ -110,7 +110,7 @@ export default function ServicesPage() {
             <div className="lg:w-1/2">
               <iframe
                 ref={iframeRef}
-                src="http://23.22.241.10:8901"
+                src="http://98.89.247.208:8901"
                 style={{ width: '100%', height: '1300px', border: 'none' }}
               />
             </div>
